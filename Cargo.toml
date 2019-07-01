@@ -1,0 +1,31 @@
+[package]
+name = "bloom_filter"
+version = "0.1.0"
+authors = ["Dimitris Spyropoulos <dimitrisspyr@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[lib]
+name = "mylib"
+path = "src/lib.rs"
+
+[build-dependencies]
+cc = "1.0"
+
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "my_bench"
+harness = false
+
+[dependencies]
+byteorder = "1.3.2"
+bit-vec = "0.6.1"
+libc = "0.2.58"
+#sha2 = "0.8.0"
+#rand = "0.6.5"
+time = "0.1.42"
+criterion = "0.2.11"
+
