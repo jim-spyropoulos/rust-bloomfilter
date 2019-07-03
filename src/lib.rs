@@ -89,7 +89,7 @@ pub struct MyBloomFilter{
         else{
             ret = (2.0 as f64).powf(l2.ceil())
         }
-        //println!("returning {}",ret );
+        println!("Received {} . returning {}",size_bloom, ret );
         //println!("bitand 13 & 4 = {}",13&4);
         ret
  }
@@ -112,41 +112,12 @@ impl MyBloomFilter{
     }
 
    
-    // fn run_hash(&self, index: u32, number : u64) -> u64 {
-    //     let mut h = FNVHasher::new();
-    //     h.write(&number.to_be_bytes());
-    //     match index {
-    //         0  =>  h.finish() , // if we have the first hash aka FNV
-    //         _  =>  h.finish() + index as u64 * mix_hash(&number) // Kirsch-Mitzenmacher-Optimization(https://stackoverflow.com/questions/11954086/which-hash-functions-to-use-in-a-bloom-filter)
-    //     }
-    // }
-    // //for this implementation i use formula : MIX_HASH + i * XXHASH
-    //  fn run_hash1(&self, index: u32, number : u64) -> u64 {
-         
-    //      extern {
-    //         //fn double_input(input: libc::c_ulonglong) -> libc::c_ulonglong;
-    //         fn XXH64(num: *mut ::libc::c_void, length: libc::size_t, seed: libc::c_ulonglong) -> libc:: c_ulonglong;
-    //      }
-
-    //     // let my_ref : *mut libc::c_void = &mut hash as *mut _  as *mut libc::c_void;
-    //     // let output = unsafe { XXH64(my_ref,64,12332243241) };
-    //     let mut num = number;
-    //     let my_ref : *mut libc::c_void = &mut num as *mut _  as *mut libc::c_void;
-    //     match index {
-    //         0  =>  mix_hash(&number) , // if we have the first hash aka FNV
-    //         _  =>  { let out  = unsafe { XXH64(my_ref,64,12333241) };
-    //                  mix_hash(&number) + out.wrapping_mul(index as u64) //to avoid overflow wrapping mul
-    //                } // Kirsch-Mitzenmacher-Optimization(https://stackoverflow.com/questions/11954086/which-hash-functions-to-use-in-a-bloom-filter)
-    //     }
-    // }
-    
-   
     pub fn clever_insert_bloom(&mut self, number : u64){
         let mixh :u64 = mix_hash(&number);
        
         let mut num = number;
         let my_ref : *mut libc::c_void = &mut num as *mut _  as *mut libc::c_void;
-        let xx_hash  = unsafe { XXH64(my_ref,8,1994) };
+        let xx_hash  = unsafe { XXH64(my_ref,8,14654564) };
 
          //to avoid constant multiplications 
         let mut h_value:u64 = mixh;
@@ -194,26 +165,14 @@ impl MyBloomFilter{
      
         let mut num = number;
         let my_ref : *mut libc::c_void = &mut num as *mut _  as *mut libc::c_void;
-        let xx_hash  = unsafe { XXH64(my_ref,8,1994) };
+        let xx_hash  = unsafe { XXH64(my_ref,8,14654564) };
 
         for elem in 0 .. self.hash_functions {
-            // if elem==0 {
-            //      if self.bit_table.get(  (mixh % self.size ) as usize) == Some(false)  {
-            //         flag = false;
-            //         break;
-            //      }
-            // }
-            // else{
                 if self.bit_table.get(   (mixh.wrapping_add(xx_hash.wrapping_mul(elem as u64))  & self.size-1 )as usize) == Some(false)  {
                     flag = false;
                     break;
                     }
-           // }
-        //     if self.bit_table.get( (self.run_hash(elem,number) % self.size) as usize) == Some(false)  {
-        //    // if self.bit_table.get( (self.pipeline_hash(elem,number) % self.size) as usize) == Some(false)  {
-        //         flag = false;
-        //         break;
-        //     }
+  
         }
         flag
     }
@@ -224,6 +183,45 @@ impl MyBloomFilter{
 mod tests {
     use super::*;
 
+    #[test]
+    fn bloom_correctness(){
+        
+        //Read 10 000 000 numbers from a file and insert them in the bloom filter.
+        //Then ask for them and assert that u take 10 000 000 yes.
+
+        let mut bloom = MyBloomFilter::create(10000000 as u64,0.00001 as f64);
+        let file = File::open("./input/bloom_input_10m.txt").expect("error in opening bloom_input file");
+        let mut hash: u64 = 0 as u64;
+
+        BufReader::new(file).lines().for_each(|line| {
+           
+           match line{
+                    Err(why) => panic!("{:?}", why),
+                    Ok(string) => hash = string.parse::<u64>().unwrap()
+                }
+                bloom.clever_insert_bloom(hash); 
+        });
+
+       
+    
+        let mut counter = 0; //counts the errcors
+
+        let file2 = File::open("./input/bloom_input_10m.txt").expect("error in opening bloom test file");
+         
+        BufReader::new(file2).lines().for_each(|line| {
+           
+           match line{
+                    Err(why) => panic!("{:?}", why),
+                    Ok(string) => { hash = string.parse::<u64>().unwrap();
+                                    match bloom.check_bloom(hash as u64){
+                                        true => counter = counter + 1 ,
+                                        false => () 
+                                    } 
+                                }
+                }
+        });
+        assert_eq!(counter, 10000000);
+    }
     #[test]
     fn bloom_10_elements_size(){
         let bloom = MyBloomFilter::create(10 as u64,0.1 as f64);
