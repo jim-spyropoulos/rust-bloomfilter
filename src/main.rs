@@ -1,10 +1,16 @@
-
+extern crate time;
 use mylib::MyBloomFilter;
-use std::time::{Duration,Instant};
+use std::time::Instant;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Result};
 
-extern crate time;
+// Main function as a proof of concept.
+// The file bloom_input_10m.txt contains 10 million different numbers to be inserted in the bloom filter.
+// The file bloom_test_10m.txt contains again 10 million different numbers (inside the set and compared to first file). Existence of  
+// those numbers is checked in the bloom filter.
+// The program prints the time taken to insert 10 million numbers to the bloom filter and the number of errors while checking the bloom filter.
+// In order to increase the speed, iterators were used over the file Buffers
+
 fn main() -> Result<()> {
 
            
@@ -21,7 +27,7 @@ fn main() -> Result<()> {
                     Err(why) => panic!("{:?}", why),
                     Ok(string) => hash = string.parse::<u64>().unwrap()
                 }
-                bloom.clever_insert_bloom(hash); 
+                bloom.insert_bloom(hash); 
         });
 
        
@@ -43,11 +49,7 @@ fn main() -> Result<()> {
                                 }
                 }
         });
-
-   
-   println!("Errors are {}",counter);
-    
-    
-
+        println!("Errors are {}",counter);
     Ok(())
+
 }
